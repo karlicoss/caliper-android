@@ -3,14 +3,15 @@ package benchmarks;
 import com.github.karlicoss.caliper.demo.EnhancedArrayList;
 import com.github.karlicoss.caliper.demo.EnhancedIterable;
 import com.github.karlicoss.caliper.demo.EnhancedLinkedList;
+import com.google.caliper.BeforeExperiment;
+import com.google.caliper.Benchmark;
 import com.google.caliper.Param;
-import com.google.caliper.Runner;
-import com.google.caliper.SimpleBenchmark;
+import com.google.caliper.runner.CaliperMain;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-public class DemoBenchmark extends SimpleBenchmark {
+public class DemoBenchmark {
     /**
      * Caliper can deserialize string values to simple types
      */
@@ -29,8 +30,8 @@ public class DemoBenchmark extends SimpleBenchmark {
     /**
      * If necessary, you may initialize test data dependent on @Params here
      */
-    @Override
-    protected void setUp() throws Exception {
+    @BeforeExperiment
+    public void setUp() throws Exception {
         this.enhancedIterable = method.prepareEnhancedIterable(length);
     }
 
@@ -63,6 +64,7 @@ public class DemoBenchmark extends SimpleBenchmark {
     /*
         Benchmarks are prefixed with "time" prefix
      */
+    @Benchmark
     public int timeSum(int repetitions) {
         int blackhole = 0;
         for (int i = 0; i < repetitions; i++) {
@@ -71,6 +73,7 @@ public class DemoBenchmark extends SimpleBenchmark {
         return blackhole;
     }
 
+    @Benchmark
     public int timeProduct(int repetitions) {
         int blackhole = 0;
         for (int i = 0; i < repetitions; i++) {
@@ -93,6 +96,8 @@ public class DemoBenchmark extends SimpleBenchmark {
 
          */
         System.setProperty("os.name", "Android");
-        Runner.main(DemoBenchmark.class, args);
+        CaliperMain.main(DemoBenchmark.class, args);
+//        Runner.main(DemoBenchmark.class, args);
     }
+
 }
