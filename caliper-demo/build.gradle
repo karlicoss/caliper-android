@@ -26,7 +26,7 @@ sourceSets {
 
 
 dependencies {
-    compile libraries.guava
+//    compile libraries.guava
 
     testCompile libraries.junit
 
@@ -47,8 +47,8 @@ dependencies {
 shadowJar {
     classifier = "caliper"
     manifest {
-        attributes 'Implementation-Title' : 'Example of Caliper benchmark on android',
-                   'Main-Class'           : 'benchmarks.DoubleToStringBenchmark'
+        attributes 'Implementation-Title' : 'Example of Caliper benchmark on Android' //,
+//                   'Main-Class'           : 'benchmarks.DemoBenchmark'
     }
     configurations = [project.configurations.caliperRuntime ] + [project.configurations.caliperCompile]
 
@@ -74,6 +74,6 @@ task runCaliper(type: JavaExec, dependsOn: compileCaliperJava) {
 //    standardOutput = outStream
     classpath = sourceSets.caliper.runtimeClasspath
     print(classpath)
-    main = 'benchmarks.DoubleToStringBenchmark'
+    main = 'benchmarks.DemoBenchmark'
 //    args = ['--saveResults', "${benchMarksDir}/${fnameBase}.json", '-Jmode=-server,-client']
 }
