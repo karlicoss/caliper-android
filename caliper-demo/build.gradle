@@ -43,24 +43,53 @@ dependencies {
  */
 //idea.module.scopes.PROVIDED.plus += [ configurations.caliperCompile ]
 
+//project.sourceSets.caliper.output.each {i -> println(i)}
 
-shadowJar {
-    classifier = "caliper"
-    manifest {
-        attributes 'Implementation-Title' : 'Example of Caliper benchmark on Android' //,
-//                   'Main-Class'           : 'benchmarks.DemoBenchmark'
-    }
-    configurations = [project.configurations.caliperRuntime ] + [project.configurations.caliperCompile]
 
-    from(project.sourceSets.caliper.output)
+println(project.sourceSets.caliper.output as List)
+project.configurations.caliperCompile.each { i -> println(i)}
 
+def everything = (project.sourceSets.caliper.output as List) + (project.configurations.caliperCompile as List)
+println(everything)
+
+
+//println(project.sourceSets.caliper.output as List)
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+task packBenchmarksInJar(type: ShadowJar, dependsOn: compileCaliperJava) {
+    classifier = "benchmarks"
+//    configurations [project.configurations.caliperCompile]
+    from everything // project.configurations.caliperCompile, project.sourceSets.caliper.output
 }
 
-task alala(type: Exec, dependsOn: shadowJar) {
-    commandLine('/L/soft/android-sdk-linux/build-tools/23.0.3/dx', '--dex', '--output=result.jar', shadowJar.archivePath)
-    commandLine 'adb', 'push6', 'result.jar', '/sdcard/caliper.jar'
-    commandLine 'adb', 'shell', 'dalvikvm', '-cp', '/sdcard/caliper.jar', 'benchmarks.DoubleToStringBenchmark'
+task dexBenchmarks(type: Exec, dependsOn: packBenchmarksInJar) {
+    commandLine('/L/soft/android-sdk-linux/build-tools/23.0.3/dx', '--dex', '--output=result.jar', packBenchmarksInJar.archivePath)
 }
+
+task pushOnDevice(type: Exec, dependsOn: dexBenchmarks) {
+    commandLine 'adb', 'push', 'result.jar', '/sdcard/caliper.jar'
+}
+
+task runCaliperOnDevice(type: Exec, dependsOn: pushOnDevice) {
+    commandLine 'adb', 'shell', 'dalvikvm', '-cp', '/sdcard/caliper.jar', 'benchmarks.DemoBenchmark'
+}
+
+//shadowJar {
+//    classifier = "caliper"
+//    manifest {
+//        attributes 'Implementation-Title' : 'Example of Caliper benchmark on Android' //,
+////                   'Main-Class'           : 'benchmarks.DemoBenchmark'
+//    }
+//
+//    configurations = [project.configurations.caliperRuntime]
+////    configurations = []
+////    from project.sourceSets.caliper.output
+//}
+
+
+//shadowJar.properties.each { i -> println(i) }
+
 
 
 task runCaliper(type: JavaExec, dependsOn: compileCaliperJava) {
