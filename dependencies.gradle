@@ -1,0 +1,21 @@
+ext.versions = [
+    // main dependencies
+    guava   : '19.0',
+
+    // test dependencies
+    junit   : '4.12',
+
+    // profiling dependencies
+    caliper : '0.5-rc1', // version 1.0 doesn't work with Android :(
+]
+
+ext.libraries = [
+    // main dependencies
+    guava   : 'com.google.guava:guava:' + versions.guava,
+
+    // test dependencies
+    junit   : 'junit:junit:' + versions.junit,
+
+    // caliper
+    caliper : 'com.google.caliper:caliper:' + versions.caliper
+]

@@ -1,0 +1,87 @@
+buildscript {
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+    }
+}
+
+
+plugins {
+    id 'java'
+    id 'idea'
+    id 'com.github.johnrengelman.shadow' version '1.2.3'
+}
+
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
+
+
+sourceSets {
+    /*
+        We define a separate source set for benchmarks code, so it doesn't get mixed with app code.
+        That way, we can provide it with different dependencies as well.
+     */
+    caliper {
+        java {
+            srcDir 'src/caliper/java'
+        }
+    }
+}
+
+
+dependencies {
+//    compile libraries.guava
+
+    testCompile libraries.junit
+
+    /**
+     * Now, we add main app code (and its depencencies to the caliper classpath)
+     *
+     * I wonder if there is a nicer way to do it, please tell if you know!
+     */
+    caliperCompile sourceSets.main.output
+    caliperCompile configurations.compile
+    caliperCompile libraries.caliper
+}
+
+
+/*
+    Old versions of Intellij IDEA only had main and test source sets support, and defining a custom source set led to compile errors in IDE.
+    IDEA 2016.1 has improved support for difference gradle source sets (see https://blog.jetbrains.com/idea/2016/03/intellij-idea-2016-1-is-here/)
+    If you for some reason have to use old version of Intellij IDEA, uncomment the workaround below to make IDE discover your source set dependencies.
+ */
+//idea.module.scopes.PROVIDED.plus += [ configurations.caliperCompile ]
+
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+task packBenchmarksInJar(type: ShadowJar, dependsOn: compileCaliperJava) {
+    classifier = "benchmarks"
+    from project.sourceSets.caliper.output, project.configurations.caliperCompile
+}
+
+task dexBenchmarks(type: Exec, dependsOn: packBenchmarksInJar) {
+    commandLine('/L/soft/android-sdk-linux/build-tools/23.0.3/dx', '--dex', '--output=result.jar', packBenchmarksInJar.archivePath)
+}
+
+task pushOnDevice(type: Exec, dependsOn: dexBenchmarks) {
+    commandLine 'adb', 'push', 'result.jar', '/sdcard/caliper.jar'
+}
+
+task runCaliperOnDevice(type: Exec, dependsOn: pushOnDevice) {
+    commandLine 'adb', 'shell', 'dalvikvm', '-cp', '/sdcard/caliper.jar', '-Dos.name=Linux', 'benchmarks.DemoBenchmark'
+}
+
+
+task runCaliperLocally(type: JavaExec, dependsOn: compileCaliperJava) {
+//    def vmVer = System.getProperty('java.version')
+//    def osName = System.getProperty('os.name').replaceAll('\\s','')
+//    def osArch = System.getProperty('os.arch')
+//    def fnameBase = "ver${version}_${osName}-${osArch}_jvm${vmVer}"
+//    def benchMarksDir = "${project.buildDir}/benchmarks"
+//    ant.mkdir(dir: benchMarksDir)
+//    def outStream = new FileOutputStream("${benchMarksDir}/${fnameBase}-out.txt")
+//    standardOutput = outStream
+    classpath = sourceSets.caliper.runtimeClasspath
+    main = 'benchmarks.DemoBenchmark'
+//    args = ['--saveResults', "${benchMarksDir}/${fnameBase}.json", '-Jmode=-server,-client']
+}

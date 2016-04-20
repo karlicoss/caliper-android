@@ -1,0 +1,26 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+apply from: 'dependencies.gradle'
+
+subprojects { project ->
+    repositories {
+        jcenter()
+    }
+
+    buildscript {
+        repositories {
+            jcenter()
+        }
+    }
+
+    tasks.withType(Test) {
+        testLogging {
+            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED
+            exceptionFormat TestExceptionFormat.FULL
+            showCauses true
+            showExceptions true
+            showStackTraces true
+        }
+    }
+}
