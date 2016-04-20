@@ -14,7 +14,7 @@ public class DemoBenchmark extends SimpleBenchmark {
     /**
      * Caliper can deserialize string values to simple types
      */
-    @Param({"1", "10", "100", "1000", "10000"})
+    @Param({"1"}) // , "10"}) //, "100", "1000", "10000"})
     private int length;
 
     /**
@@ -80,6 +80,19 @@ public class DemoBenchmark extends SimpleBenchmark {
     }
 
     public static void main(String[] args) throws Exception {
+        /**
+         * Workaround from crash
+         * An exception was thrown from the benchmark code.
+         java.lang.NullPointerException: Attempt to invoke virtual method 'boolean java.lang.String.equals(java.lang.Object)' on a null object reference
+         at com.google.caliper.EnvironmentGetter.getEnvironmentSnapshot(EnvironmentGetter.java:66)
+         at com.google.caliper.Runner.runOutOfProcess(Runner.java:384)
+         com.google.caliper.Runner.run(Runner.java:97)
+         at com.google.caliper.Runner.main(Runner.java:423)
+         at com.google.caliper.Runner.main(Runner.java:436)
+         at benchmarks.DemoBenchmark.main(DemoBenchmark.java:83)
+
+         */
+        System.setProperty("os.name", "Android");
         Runner.main(DemoBenchmark.class, args);
     }
 }
