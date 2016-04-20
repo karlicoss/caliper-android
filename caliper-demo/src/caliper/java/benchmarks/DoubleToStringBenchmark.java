@@ -1,5 +1,6 @@
 package benchmarks;
 
+import com.github.karlicoss.caliper.demo.Demo;
 import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
@@ -69,6 +70,7 @@ public class DoubleToStringBenchmark extends SimpleBenchmark {
         double d = value.value;
         int dummy = 0;
         for (int i = 0; i < reps; i++) {
+            Demo demo = new Demo();
             dummy += method.convert(d).length();
         }
         return dummy;

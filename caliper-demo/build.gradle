@@ -1,9 +1,4 @@
 buildscript {
-//    repositories {
-//        maven {
-//            url "https://plugins.gradle.org/m2/"
-//        }
-//    }
     dependencies {
         classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
     }
@@ -31,19 +26,22 @@ sourceSets {
 
 
 dependencies {
-    testCompile libraries.junit
-//    testCompile libraries.googleCompileTesting
-//    testCompile libraries.googleTruth
-//    testCompile libraries.commonsLang
-    // we need 'tools.jar' (which is a part of JDK) to test annotations processor
-//    testCompile files(org.gradle.internal.jvm.Jvm.current().getToolsJar())
+    compile libraries.guava
 
-//    caliperCompile sourceSets.main.output // ugh is it really the proper way to do it?
-//    caliperCompile configurations.compile  // TODO include main project dependencies
-    caliperCompile 'com.google.caliper:caliper:0.5-rc1'
+    testCompile libraries.junit
+
+    // add main app code (and its dependencies) to the caliper classpath
+    caliperCompile sourceSets.main.output
+    caliperCompile configurations.compile
+    caliperCompile libraries.caliper
 }
 
-idea.module.scopes.PROVIDED.plus += [ configurations.caliperCompile ]
+/*
+    Old versions of Intellij IDEA only had main and test source sets support, and defining a custom source set led to compile errors in IDE.
+    IDEA 2016.1 has improved support for difference gradle source sets (see https://blog.jetbrains.com/idea/2016/03/intellij-idea-2016-1-is-here/)
+    If you for some reason have to use old version of Intellij IDEA, uncomment the workaround below to make IDE discover your source set dependencies.
+ */
+//idea.module.scopes.PROVIDED.plus += [ configurations.caliperCompile ]
 
 
 shadowJar {
@@ -60,7 +58,7 @@ shadowJar {
 
 task alala(type: Exec, dependsOn: shadowJar) {
     commandLine('/L/soft/android-sdk-linux/build-tools/23.0.3/dx', '--dex', '--output=result.jar', shadowJar.archivePath)
-    commandLine 'adb', 'push', 'result.jar', '/sdcard/caliper.jar'
+    commandLine 'adb', 'push6', 'result.jar', '/sdcard/caliper.jar'
     commandLine 'adb', 'shell', 'dalvikvm', '-cp', '/sdcard/caliper.jar', 'benchmarks.DoubleToStringBenchmark'
 }
 
