@@ -1,11 +1,10 @@
 buildscript {
-    repositories {
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-    }
+//    repositories {
+//        maven {
+//            url "https://plugins.gradle.org/m2/"
+//        }
+//    }
     dependencies {
-        classpath "gradle.plugin.me.champeau.gradle:jmh-gradle-plugin:0.3.0"
         classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
     }
 }
@@ -14,10 +13,8 @@ buildscript {
 plugins {
     id 'java'
     id 'idea'
-    id 'me.champeau.gradle.jmh' version '0.3.0'
     id 'com.github.johnrengelman.shadow' version '1.2.3'
 }
-apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 
 
 sourceCompatibility = JavaVersion.VERSION_1_7
@@ -34,30 +31,18 @@ sourceSets {
 
 
 dependencies {
-    compile libraries.jetbrainsAnnotations
-
-    compile libraries.autoValue
-    compile libraries.autoService
-    compile libraries.javapoet
-
     testCompile libraries.junit
-    testCompile libraries.googleCompileTesting
-    testCompile libraries.googleTruth
-    testCompile libraries.commonsLang
+//    testCompile libraries.googleCompileTesting
+//    testCompile libraries.googleTruth
+//    testCompile libraries.commonsLang
     // we need 'tools.jar' (which is a part of JDK) to test annotations processor
-    testCompile files(org.gradle.internal.jvm.Jvm.current().getToolsJar())
+//    testCompile files(org.gradle.internal.jvm.Jvm.current().getToolsJar())
 
 //    caliperCompile sourceSets.main.output // ugh is it really the proper way to do it?
 //    caliperCompile configurations.compile  // TODO include main project dependencies
     caliperCompile 'com.google.caliper:caliper:0.5-rc1'
 }
 
-jmh {
-    jmhVersion = versions.jmh
-}
-
-
-idea.module.scopes.PROVIDED.plus += [ configurations.jmhCompile ]
 idea.module.scopes.PROVIDED.plus += [ configurations.caliperCompile ]
 
 
