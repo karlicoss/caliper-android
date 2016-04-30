@@ -1,14 +1,40 @@
-buildscript {
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+apply plugin: 'com.android.application'
+
+
+
+//plugins {
+//    id 'com.android.application' version '2.1.0'
+//    id 'java'
+//    id 'idea'
+//    id 'com.github.johnrengelman.shadow' version '1.2.3'
+//}
+
+
+android {
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        applicationId "com.github.karlicoss.caliper.demo"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
     }
-}
 
 
-plugins {
-    id 'java'
-    id 'idea'
-    id 'com.github.johnrengelman.shadow' version '1.2.3'
+    sourceSets {
+        /*
+            We define a separate source set for benchmarks code, so it doesn't get mixed with app code.
+            That way, we can provide it with different dependencies as well.
+         */
+        caliper {
+            java {
+                srcDir 'src/caliper/java'
+            }
+        }
+    }
 }
 
 
@@ -16,17 +42,11 @@ sourceCompatibility = JavaVersion.VERSION_1_7
 targetCompatibility = JavaVersion.VERSION_1_7
 
 
-sourceSets {
-    /*
-        We define a separate source set for benchmarks code, so it doesn't get mixed with app code.
-        That way, we can provide it with different dependencies as well.
-     */
-    caliper {
-        java {
-            srcDir 'src/caliper/java'
-        }
-    }
-}
+//def String configurationName = 'caliper'
+//def Configuration conf = project.configurations.create(configurationName).extendsFrom(
+//        project.configurations.getByName('compile'),
+//        project.configurations.getByName('provided')
+//)
 
 
 dependencies {
@@ -39,8 +59,8 @@ dependencies {
      *
      * I wonder if there is a nicer way to do it, please tell if you know!
      */
-    caliperCompile sourceSets.main.output
-    caliperCompile configurations.compile
+//    caliperCompile sourceSets.main.output
+//    caliperCompile configurations.compile
     caliperCompile libraries.caliper
 }
 
@@ -52,36 +72,82 @@ dependencies {
  */
 //idea.module.scopes.PROVIDED.plus += [ configurations.caliperCompile ]
 
-
+buildscript {
+    repositories { jcenter() }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+    }
+}
+apply plugin: 'com.github.johnrengelman.shadow'
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-task packBenchmarksInJar(type: ShadowJar, dependsOn: compileCaliperJava) {
-    classifier = "benchmarks"
-    from project.sourceSets.caliper.output, project.configurations.caliperCompile
+
+import com.android.build.gradle.api.AndroidSourceSet
+import com.android.build.gradle.AppExtension
+import groovy.transform.TypeChecked
+
+@TypeChecked
+void alala(Project project) {
+    def AndroidSourceSet sset = project.extensions.getByType(AppExtension).sourceSets.getByName('caliper')
+    println(sset.java.srcDirs)
 }
 
-task dexBenchmarks(type: Exec, dependsOn: packBenchmarksInJar) {
-    commandLine('/L/soft/android-sdk-linux/build-tools/23.0.3/dx', '--dex', '--output=result.jar', packBenchmarksInJar.archivePath)
-}
+//alala(project)
 
-task pushOnDevice(type: Exec, dependsOn: dexBenchmarks) {
-    commandLine 'adb', 'push', 'result.jar', '/sdcard/caliper.jar'
-}
+//project.configurations.caliperCompile.extendsFrom(project.configurations.compile)
 
-task runCaliperOnDevice(type: Exec, dependsOn: pushOnDevice) {
-    commandLine 'adb', 'shell', 'dalvikvm', '-cp', '/sdcard/caliper.jar', '-Dos.name=Linux', 'benchmarks.DemoBenchmark'
-}
+//println(project.configurations.caliperCompile.dependencies as List)
+
+//println(project.configurations.compile.all[0].cla)
 
 
-task runCaliperLocally(type: JavaExec, dependsOn: compileCaliperJava) {
-//    def vmVer = System.getProperty('java.version')
-//    def osName = System.getProperty('os.name').replaceAll('\\s','')
-//    def osArch = System.getProperty('os.arch')
-//    def fnameBase = "ver${version}_${osName}-${osArch}_jvm${vmVer}"
-//    def benchMarksDir = "${project.buildDir}/benchmarks"
-//    ant.mkdir(dir: benchMarksDir)
-//    def outStream = new FileOutputStream("${benchMarksDir}/${fnameBase}-out.txt")
-//    standardOutput = outStream
-    classpath = sourceSets.caliper.runtimeClasspath
-    main = 'benchmarks.DemoBenchmark'
-//    args = ['--saveResults', "${benchMarksDir}/${fnameBase}.json", '-Jmode=-server,-client']
+project.afterEvaluate {
+    android.applicationVariants.all { variant ->
+
+        def JavaCompile javaCompileTask = variant.javaCompile
+
+        Task compileCaliperTask = project.task("compileCaliper${variant.name}", type: JavaCompile) {
+            source = project.extensions.getByType(AppExtension).sourceSets.getByName('caliper').java.srcDirs
+            classpath = project.files(javaCompileTask.destinationDir, project.configurations.caliperCompile) // .classpath // , project.configurations.compile.classpath]
+            destinationDir = file('/L/tmp/compile/')
+        }
+
+
+        Task packBenchmarks = project.task("packBenchmarksInJar${variant.name}", type: ShadowJar, dependsOn: [javaCompileTask, compileCaliperTask]) {
+            classifier = "benchmarks"
+            from compileCaliperTask.destinationDir, project.configurations.caliperCompile, javaCompileTask.destinationDir
+        }
+
+        Task dexBenchmarks = project.task("dexBenchmarks${variant.name}", type: Exec, dependsOn: packBenchmarks) {
+            commandLine('/L/soft/android-sdk-linux/sdk/build-tools/23.0.2/dx', '--dex', '--output=result.jar', packBenchmarks.archivePath)
+        }
+
+        Task pushOnDevice = project.task("pushOnDevice${variant.name}", type: Exec, dependsOn: dexBenchmarks) {
+            commandLine 'adb', 'push', 'result.jar', '/sdcard/caliper.jar'
+        }
+//
+        Task runOnDevice = project.task("runCaliperOnDevice${variant.name}", type: Exec, dependsOn: pushOnDevice) {
+            commandLine 'adb', 'shell', 'dalvikvm', '-cp', '/sdcard/caliper.jar', '-Dos.name=Linux', 'benchmarks.DemoBenchmark'
+        }
+//        configureVariant(project, conf, variant)
+    }
 }
+
+
+
+
+
+//
+//
+//task runCaliperLocally(type: JavaExec, dependsOn: compileCaliperJava) {
+////    def vmVer = System.getProperty('java.version')
+////    def osName = System.getProperty('os.name').replaceAll('\\s','')
+////    def osArch = System.getProperty('os.arch')
+////    def fnameBase = "ver${version}_${osName}-${osArch}_jvm${vmVer}"
+////    def benchMarksDir = "${project.buildDir}/benchmarks"
+////    ant.mkdir(dir: benchMarksDir)
+////    def outStream = new FileOutputStream("${benchMarksDir}/${fnameBase}-out.txt")
+////    standardOutput = outStream
+//    classpath = sourceSets.caliper.runtimeClasspath
+//    main = 'benchmarks.DemoBenchmark'
+////    args = ['--saveResults', "${benchMarksDir}/${fnameBase}.json", '-Jmode=-server,-client']
+//}

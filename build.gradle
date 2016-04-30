@@ -1,19 +1,34 @@
-import org.gradle.api.tasks.testing.logging.TestExceptionFormat
-import org.gradle.api.tasks.testing.logging.TestLogEvent
-
 apply from: 'dependencies.gradle'
 
-subprojects { project ->
+buildscript {
     repositories {
         jcenter()
     }
 
+    dependencies {
+        classpath 'com.android.tools.build:gradle:2.1.0'
+//        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+    }
+}
+
+
+allprojects {
     buildscript {
         repositories {
             jcenter()
         }
     }
 
+    repositories {
+        jcenter()
+    }
+}
+
+
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+subprojects {
     tasks.withType(Test) {
         testLogging {
             events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED
