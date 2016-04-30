@@ -14,7 +14,7 @@ public class DemoBenchmark extends SimpleBenchmark {
     /**
      * Caliper can deserialize string values to simple types
      */
-    @Param({"1", "10", "100", "1000", "10000"})
+    @Param({"1", "10", "100"}) // , "1000", "10000"})
     private int length;
 
     /**
@@ -71,13 +71,13 @@ public class DemoBenchmark extends SimpleBenchmark {
         return blackhole;
     }
 
-    public int timeProduct(int repetitions) {
-        int blackhole = 0;
-        for (int i = 0; i < repetitions; i++) {
-            blackhole += enhancedIterable.product();
-        }
-        return blackhole;
-    }
+//    public int timeProduct(int repetitions) {
+//        int blackhole = 0;
+//        for (int i = 0; i < repetitions; i++) {
+//            blackhole += enhancedIterable.product();
+//        }
+//        return blackhole;
+//    }
 
     public static void main(String[] args) throws Exception {
         /**
