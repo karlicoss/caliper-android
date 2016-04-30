@@ -1,5 +1,11 @@
+buildscript {
+    repositories { jcenter() }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+    }
+}
 apply plugin: 'com.android.application'
-
+apply plugin: 'com.github.johnrengelman.shadow'
 
 
 //plugins {
@@ -70,33 +76,13 @@ dependencies {
  */
 //idea.module.scopes.PROVIDED.plus += [ configurations.caliperCompile ]
 
-buildscript {
-    repositories { jcenter() }
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
-    }
-}
-apply plugin: 'com.github.johnrengelman.shadow'
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
-import com.android.build.gradle.api.AndroidSourceSet
 import com.android.build.gradle.AppExtension
 import groovy.transform.TypeChecked
 
-@TypeChecked
-void alala(Project project) {
-    def AndroidSourceSet sset = project.extensions.getByType(AppExtension).sourceSets.getByName('caliper')
-    println(sset.java.srcDirs)
-}
 
-//alala(project)
-
-//project.configurations.caliperCompile.extendsFrom(project.configurations.compile)
-
-//println(project.configurations.caliperCompile.dependencies as List)
-
-//println(project.configurations.compile.all[0].cla)
-
+// TODO is there a more convenient way of getting dx path?
 def File dxCommand() {
     File result = android.getSdkDirectory()
     result = new File(result, 'build-tools')
@@ -105,21 +91,16 @@ def File dxCommand() {
     return result
 }
 
+def File adbCommand() {
+    return android.getAdbExe()
+}
+
 project.afterEvaluate {
     android.applicationVariants.all { variant ->
-
-        def sdk = android.getSdkDirectory().toString()
-        def adb = android.getAdbExe().toString()
-
-        println(android.properties)
-        println("SDK " + sdk)
-        println("ADB " + adb)
-
-//        println(variant.sourceSets) // TODO ??
         def JavaCompile javaCompileTask = variant.javaCompile
 
         JavaCompile compileCaliperTask = project.task(
-                "compileCaliper${variant.name}",
+                "compileCaliper${variant.name.capitalize()}",
                 type: JavaCompile,
                 dependsOn: javaCompileTask
         ) {
@@ -130,7 +111,7 @@ project.afterEvaluate {
 
 
         ShadowJar packBenchmarks = project.task(
-                "packBenchmarksInJar${variant.name}",
+                "packBenchmarksInJar${variant.name.capitalize()}",
                 type: ShadowJar,
                 dependsOn: [javaCompileTask, compileCaliperTask]
         ) {
@@ -138,18 +119,19 @@ project.afterEvaluate {
             from compileCaliperTask.destinationDir, project.configurations.caliperCompile, javaCompileTask.destinationDir
         } as ShadowJar
 
-        Task dexBenchmarks = project.task("dexBenchmarks${variant.name}", type: Exec, dependsOn: packBenchmarks) {
+        Task dexBenchmarks = project.task("dexBenchmarks${variant.name.capitalize()}", type: Exec, dependsOn: packBenchmarks) {
             commandLine(dxCommand(), '--dex', '--output=result.jar', packBenchmarks.archivePath)
         }
 
-        Task pushOnDevice = project.task("pushOnDevice${variant.name}", type: Exec, dependsOn: dexBenchmarks) {
-            commandLine 'adb', 'push', 'result.jar', '/sdcard/caliper.jar'
+        // TODO how to create temporary file? 
+        // TODO is there a more abstract way of using ADB from Gradle?
+        Task pushOnDevice = project.task("pushOnDevice${variant.name.capitalize()}", type: Exec, dependsOn: dexBenchmarks) {
+            commandLine adbCommand(), 'push', 'result.jar', '/sdcard/caliper.jar'
         }
-//
-        Task runOnDevice = project.task("runCaliperOnDevice${variant.name}", type: Exec, dependsOn: pushOnDevice) {
-            commandLine 'adb', 'shell', 'dalvikvm', '-cp', '/sdcard/caliper.jar', '-Dos.name=Linux', 'benchmarks.DemoBenchmark'
+
+        Task runOnDevice = project.task("runCaliperOnDevice${variant.name.capitalize()}", type: Exec, dependsOn: pushOnDevice) {
+            commandLine adbCommand(), 'shell', 'dalvikvm', '-cp', '/sdcard/caliper.jar', '-Dos.name=Linux', 'benchmarks.DemoBenchmark'
         }
-//        configureVariant(project, conf, variant)
     }
 }
 
