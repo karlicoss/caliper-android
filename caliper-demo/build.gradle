@@ -48,7 +48,6 @@ targetCompatibility = JavaVersion.VERSION_1_7
 //        project.configurations.getByName('provided')
 //)
 
-
 dependencies {
 //    compile libraries.guava
 
@@ -60,7 +59,6 @@ dependencies {
      * I wonder if there is a nicer way to do it, please tell if you know!
      */
 //    caliperCompile sourceSets.main.output
-//    caliperCompile configurations.compile
     caliperCompile libraries.caliper
 }
 
@@ -99,26 +97,49 @@ void alala(Project project) {
 
 //println(project.configurations.compile.all[0].cla)
 
+def File dxCommand() {
+    File result = android.getSdkDirectory()
+    result = new File(result, 'build-tools')
+    result = new File(result, android.buildToolsVersion)
+    result = new File(result, 'dx')
+    return result
+}
 
 project.afterEvaluate {
     android.applicationVariants.all { variant ->
 
+        def sdk = android.getSdkDirectory().toString()
+        def adb = android.getAdbExe().toString()
+
+        println(android.properties)
+        println("SDK " + sdk)
+        println("ADB " + adb)
+
+//        println(variant.sourceSets) // TODO ??
         def JavaCompile javaCompileTask = variant.javaCompile
 
-        Task compileCaliperTask = project.task("compileCaliper${variant.name}", type: JavaCompile) {
+        JavaCompile compileCaliperTask = project.task(
+                "compileCaliper${variant.name}",
+                type: JavaCompile,
+                dependsOn: javaCompileTask
+        ) {
             source = project.extensions.getByType(AppExtension).sourceSets.getByName('caliper').java.srcDirs
-            classpath = project.files(javaCompileTask.destinationDir, project.configurations.caliperCompile) // .classpath // , project.configurations.compile.classpath]
-            destinationDir = file('/L/tmp/compile/')
-        }
+            classpath = project.files(javaCompileTask.destinationDir, project.configurations.caliperCompile)
+            destinationDir = file('/L/tmp/compile/') // TODO can we choose the directory properly?
+        } as JavaCompile
 
 
-        Task packBenchmarks = project.task("packBenchmarksInJar${variant.name}", type: ShadowJar, dependsOn: [javaCompileTask, compileCaliperTask]) {
+        ShadowJar packBenchmarks = project.task(
+                "packBenchmarksInJar${variant.name}",
+                type: ShadowJar,
+                dependsOn: [javaCompileTask, compileCaliperTask]
+        ) {
             classifier = "benchmarks"
             from compileCaliperTask.destinationDir, project.configurations.caliperCompile, javaCompileTask.destinationDir
-        }
+        } as ShadowJar
 
         Task dexBenchmarks = project.task("dexBenchmarks${variant.name}", type: Exec, dependsOn: packBenchmarks) {
-            commandLine('/L/soft/android-sdk-linux/sdk/build-tools/23.0.2/dx', '--dex', '--output=result.jar', packBenchmarks.archivePath)
+            commandLine(dxCommand(), '--dex', '--output=result.jar', packBenchmarks.archivePath)
         }
 
         Task pushOnDevice = project.task("pushOnDevice${variant.name}", type: Exec, dependsOn: dexBenchmarks) {
